@@ -69,24 +69,17 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
             // .arg("--pure-eval") // See evaluate.nix for why this isn't passed yet
             .arg("path-info")
             .arg("--derivation")
-            .arg(format!("nixpkgs{}#{}",&job.nixpkgs_revision, attrs.join(";")))
-            .output()
-            .expect("failed to execute process");
-        log_command_output(eval);
-
-        let query_requisites = Command::new("nix-store")
-            .arg("--query")
-            .arg("--requisites")
-            .arg(&drv)
+            .arg("--recursive")
+            .arg(format!("nixpkgs/{}#{}",&job.nixpkgs_revision, attrs.join(".")))
             .output()
             .expect("failed to execute process");
 
-        for line in query_requisites.stdout.lines().filter_map(Result::ok) {
+        for line in eval.stdout.lines().filter_map(Result::ok) {
             if line.ends_with(".drv") {
                 to_build.insert(line.into());
             }
         }
-        log_command_output(query_requisites);
+        log_command_output(eval);
     }
 
     JobInstantiation { to_build, results, skip_list }
