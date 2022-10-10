@@ -40,7 +40,7 @@ pub fn report(instruction: BuildRequest) {
     let mut unchecked = 0;
     let mut first_failed: Vec<String> = vec![];
 
-    let attr_name = job.subsets.values().next().unwrap().as_ref().unwrap().get(0).unwrap().join(".");
+    let attr_name = job.subsets.values().next().unwrap().join(".");
 
     for response in results.into_iter().filter(|response| {
         (match response.request {

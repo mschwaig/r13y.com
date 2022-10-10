@@ -1,6 +1,5 @@
 use log::debug;
 
-use itertools::Itertools;
 use structopt::StructOpt;
 
 use r13y::{
@@ -62,13 +61,12 @@ fn parse_subset(s: &str) -> Result<(Subset, Attr), &'static str> {
         None => return Err("no subset specifier"),
     };
 
-    let attr_path = if let Some(attrs) = comp.next() {
-        attrs.split('.').map(str::to_owned).collect()
+    if let Some(attr) = comp.next() {
+        let attr_path = attr.split('.').map(str::to_owned).collect();
+        Ok((subset, attr_path))
     } else {
-        Vec::new()
-    };
-
-    Ok((subset, attr_path))
+        Err("Empty attribute specifier")
+    }
 }
 
 fn main() {
@@ -80,15 +78,8 @@ fn main() {
     let subsets = opt
         .subsets
         .into_iter()
-        .into_group_map()
-        .into_iter()
-        .map(|(subset, group)| {
-            let attrs = if group.iter().any(<Vec<String>>::is_empty) {
-                None
-            } else {
-                Some(group)
-            };
-            (subset, attrs)
+        .map(|(subset, attr)| {
+            (subset, attr)
         })
         .collect();
 

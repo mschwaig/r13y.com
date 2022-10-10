@@ -59,7 +59,7 @@ pub struct BuildRequestV1 {
     /// the server is not able to ask for a specific path maliciously.
     /// In other words, the server asks for `NixOSReleaseCombined`,
     /// not `./nixos/release-combined.nix`.
-    pub subsets: HashMap<Subset, Attrs>,
+    pub subsets: HashMap<Subset, Attr>,
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
@@ -80,9 +80,6 @@ impl<'a> Into<&'static Path> for &'a Subset {
         }
     }
 }
-
-/// If None, every attribute. If a list, only specific attributes.
-pub type Attrs = Option<Vec<Attr>>;
 
 /// nixos.iso_minimal.x86_64-linux would be
 /// &["nixos", "iso_minimal", "x86_64-linux"] but vec'd.

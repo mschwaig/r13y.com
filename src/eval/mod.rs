@@ -57,15 +57,14 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
 
     let mut to_build: HashSet<PathBuf> = HashSet::new();
 
-    for (subset, attrs) in job.subsets.into_iter() {
-        let attrs: Vec<std::string::String> = attrs.unwrap_or_default().iter().map(|a| a.join(".")).collect();
+    for (subset, attr) in job.subsets.into_iter() {
 
-        info!("Evaluating {:?} {:#?}", &subset, &attrs);
+        info!("Evaluating {:?} {:#?}", &subset, &attr);
         let eval = Command::new("nix")
             .arg("path-info")
             .arg("--derivation")
             .arg("--recursive")
-            .arg(format!("nixpkgs/{}#{}",&job.nixpkgs_revision, attrs.join(".")))
+            .arg(format!("nixpkgs/{}#{}",&job.nixpkgs_revision, attr.join(".")))
             .output()
             .expect("failed to execute process");
 
