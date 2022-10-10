@@ -1,12 +1,12 @@
 use log::{debug, info};
 
-use crate::messages::{Attr, BuildRequest, BuildResponseV1, BuildStatus};
+use crate::messages::{BuildRequest, BuildResponseV1, BuildStatus};
 
 use std::{
     collections::HashSet,
     fs::File,
     io::BufRead,
-    path::{Path, PathBuf},
+    path::{PathBuf},
     process::{Command, Output},
 };
 
@@ -55,18 +55,13 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         }
     }
 
-    let tmpdir = PathBuf::from("./tmp/");
-
     let mut to_build: HashSet<PathBuf> = HashSet::new();
 
     for (subset, attrs) in job.subsets.into_iter() {
-        let drv = tmpdir.join("result.drv");
-        let path: &Path = (&subset).into();
         let attrs: Vec<std::string::String> = attrs.unwrap_or_default().iter().map(|a| a.join(".")).collect();
 
         info!("Evaluating {:?} {:#?}", &subset, &attrs);
         let eval = Command::new("nix")
-            // .arg("--pure-eval") // See evaluate.nix for why this isn't passed yet
             .arg("path-info")
             .arg("--derivation")
             .arg("--recursive")
