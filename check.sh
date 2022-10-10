@@ -14,7 +14,7 @@ function main() {
     export SUBSET="$1"
     export REPORT_NAME="$2"
     export REV=$(nixpkgs_rev)
-    export HASH=$(nix-prefetch-url --unpack "https://github.com/NixOS/nixpkgs/archive/${REV}.tar.gz")
+    export HASH=$(nix flake prefetch nixpkgs/${REV})
 
     export RUST_BACKTRACE=1
 
