@@ -38,9 +38,6 @@ function main() {
         report
 
     mv ./report "./$REPORT_NAME"
-
-    tar -cJf "./$REPORT_NAME.tar.xz" "./$REPORT_NAME"
-    buildkite-agent artifact upload "./$REPORT_NAME.tar.xz"
 }
 
 main "$1" "$2"
