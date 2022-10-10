@@ -62,30 +62,14 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     for (subset, attrs) in job.subsets.into_iter() {
         let drv = tmpdir.join("result.drv");
         let path: &Path = (&subset).into();
-        let attrs: Vec<Attr> = attrs.unwrap_or_default();
+        let attrs: Vec<std::string::String> = attrs.unwrap_or_default().iter().map(|a| a.join(".")).collect();
 
         info!("Evaluating {:?} {:#?}", &subset, &attrs);
-        let eval = Command::new("nix-instantiate")
+        let eval = Command::new("nix")
             // .arg("--pure-eval") // See evaluate.nix for why this isn't passed yet
-            .arg("-E")
-            .arg(include_str!("./evaluate.nix"))
-            .arg("--add-root")
-            .arg(&drv)
-            .arg("--indirect")
-            .args(&[
-                "--argstr",
-                "revision",
-                &job.nixpkgs_revision,
-                "--argstr",
-                "sha256",
-                &job.nixpkgs_sha256sum,
-                "--argstr",
-                "subfile",
-                &path.display().to_string(),
-                "--argstr",
-                "attrsJSON",
-                &serde_json::to_string(&attrs).unwrap(),
-            ])
+            .arg("path-info")
+            .arg("--derivation")
+            .arg(format!("nixpkgs{}#{}",&job.nixpkgs_revision, attrs.join(";")))
             .output()
             .expect("failed to execute process");
         log_command_output(eval);
