@@ -252,7 +252,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
             debug!("Writing out interim state to the reproducibility log");
             let mut log_file = File::create(format!(
                 "reproducibility-log-{}.json",
-                &job.nixpkgs_revision
+                &job.nar_hash
             ))
             .unwrap();
             log_file
@@ -286,7 +286,7 @@ pub fn check(instruction: BuildRequest, maximum_cores: u16, maximum_cores_per_jo
 
     let mut log_file = File::create(format!(
         "reproducibility-log-{}.json",
-        &job.nixpkgs_revision
+        &job.nar_hash
     ))
     .unwrap();
     log_file

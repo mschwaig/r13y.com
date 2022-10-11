@@ -31,7 +31,7 @@
 //! and use them to produce a build result diff.
 
 use serde::Serialize;
-use std::{collections::HashMap, path::Path};
+use std::collections::HashMap;
 
 /// A build request is located at an HTTPS endpoint, the client fetches
 /// the request, instantiates all the derivations, and then operates
@@ -43,42 +43,29 @@ pub enum BuildRequest {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BuildRequestV1 {
-    /// Nixpkgs revision to fetch for the build
-    pub nixpkgs_revision: String,
-
-    /// sha256 of Nixpkgs to support pure evaluation mode, and
+    pub flake_url: String,
+    /// revision to fetch for the build
+    pub revision: String,
+    /// nar hash of fetched flake to support pure evaluation mode, and
     /// a double-check since we're running on people's computers
-    pub nixpkgs_sha256sum: String,
+    pub nar_hash: String,
 
     /// the URL to POST the BuildResponse to
     pub result_url: String,
 
-    /// A map of files and attributes to build.
-    /// Note: the API will never dictate a file, but a *group*. This
+    /// A list with the nested attribute to build.
+    /// TODO evaluate if the following comment is still true
+    ///  Note: the API will never dictate a file, but a *group*. This
     /// means all file names and paths are generated *client side* and
     /// the server is not able to ask for a specific path maliciously.
     /// In other words, the server asks for `NixOSReleaseCombined`,
     /// not `./nixos/release-combined.nix`.
-    pub subsets: HashMap<Subset, Attr>,
+    pub attr: Attr,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
-pub enum Subset {
-    Nixpkgs,
-    NixOSReleaseCombined,
-}
-impl Into<&'static Path> for Subset {
-    fn into(self) -> &'static Path {
-        (&self).into()
-    }
-}
-impl<'a> Into<&'static Path> for &'a Subset {
-    fn into(self) -> &'static Path {
-        match self {
-            Subset::Nixpkgs => Path::new("./default.nix"),
-            Subset::NixOSReleaseCombined => Path::new("./nixos/release-combined.nix"),
-        }
-    }
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct Subset {
+
 }
 
 /// nixos.iso_minimal.x86_64-linux would be

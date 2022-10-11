@@ -1,18 +1,18 @@
 use log::debug;
 
+use serde_json::Value;
+
 use structopt::StructOpt;
+use std::process::Command;
 
 use r13y::{
     check::check,
-    messages::{Attr, BuildRequest, BuildRequestV1, Subset},
+    messages::{Attr, BuildRequest, BuildRequestV1},
     report::report,
 };
 
 #[derive(StructOpt, Debug)]
 struct Opt {
-    #[structopt(flatten)]
-    nixpkgs: Nixpkgs,
-
     #[structopt(long = "result-url")]
     result_url: Option<String>,
 
@@ -24,23 +24,10 @@ struct Opt {
     #[structopt(long = "max-cores-per-job", default_value = "1")]
     maximum_cores_per_job: u16,
 
-    /// Which subsets of nixpkgs to test.
-    /// Format: `subset:attr.path | subset`.
-    /// subset can be either of "nixpkgs" or "nixos",
-    /// attr.path is a dot-delimited attribute path into the preceding subset.
-    #[structopt(short = "s", long = "subset", parse(try_from_str = "parse_subset"))]
-    subsets: Vec<(Subset, Attr)>,
-}
-
-#[derive(StructOpt, Debug)]
-struct Nixpkgs {
-    /// Nixpkgs revision to use, e.g. 70503758fb4b37107953dfb03ad7c0cf36ad0435
-    #[structopt(long = "rev")]
-    rev: String,
-    /// SHA-256 hashsum of tarball of the given Nixpkgs revision,
-    /// e.g. 15g8xckhzpp84p6gv526hb6c1r286qvn8i14w8msw6172jy3kj3c
-    #[structopt(long = "sha256")]
-    sha256: String,
+    /// Which derivation from any flake to test.
+    /// Format: `flake/rev#attr.path flake2/rev2#attr.path`.
+    #[structopt(short = "f", long = "flake", parse(try_from_str = "parse_subset"))]
+    subsets: (String, Attr),
 }
 
 #[derive(StructOpt, Debug)]
@@ -51,19 +38,17 @@ enum Mode {
     Report,
 }
 
-fn parse_subset(s: &str) -> Result<(Subset, Attr), &'static str> {
-    let mut comp = s.split(':');
+fn parse_subset(s: &str) -> Result<(String, Attr), &'static str> {
+    let mut comp = s.split('#');
 
     let subset = match comp.next() {
-        Some("nixpkgs") => Subset::Nixpkgs,
-        Some("nixos") => Subset::NixOSReleaseCombined,
-        Some(_) => return Err("unknown subset specifier"),
+        Some(x) => x,
         None => return Err("no subset specifier"),
     };
 
     if let Some(attr) = comp.next() {
         let attr_path = attr.split('.').map(str::to_owned).collect();
-        Ok((subset, attr_path))
+        Ok((subset.to_string(), attr_path))
     } else {
         Err("Empty attribute specifier")
     }
@@ -71,23 +56,37 @@ fn parse_subset(s: &str) -> Result<(Subset, Attr), &'static str> {
 
 fn main() {
     env_logger::init();
+
     let opt = Opt::from_args();
 
     debug!("Using options: {:#?}", opt);
 
-    let subsets = opt
-        .subsets
-        .into_iter()
-        .map(|(subset, attr)| {
-            (subset, attr)
-        })
-        .collect();
+    let resolve = Command::new("nix")
+        .arg("flake")
+        .arg("metadata")
+        .arg("--json")
+        .arg(opt.subsets.0)
+        .output()
+        .expect("failed to execute process");
+
+    let resolve_output = String::from_utf8(resolve.stdout).unwrap();
+
+    debug!("Resolve output: {:#?}", resolve_output);
+
+    let v: Value = serde_json::from_str(&resolve_output).expect("failed to parse flake metadata");
+    // some strange dance to get rid of the quotes
+    let flake_url = v["resolvedUrl"].as_str().unwrap().to_string();
+    let revision = v["revision"].as_str().unwrap().to_string();
+    let nar_hash = v["locked"]["narHash"].as_str().unwrap().to_string();
+
+    debug!("flake_url: {flake_url}, revision: {revision}, nar_hash: {nar_hash}");
 
     let instruction = BuildRequest::V1(BuildRequestV1 {
-        nixpkgs_revision: opt.nixpkgs.rev,
-        nixpkgs_sha256sum: opt.nixpkgs.sha256,
+        flake_url,
+        revision,
+        nar_hash,
         result_url: opt.result_url.unwrap_or_else(|| String::from("bogus")),
-        subsets,
+        attr: opt.subsets.1,
     });
 
     debug!("Using instruction: {:#?}", instruction);

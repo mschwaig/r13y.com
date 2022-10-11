@@ -42,7 +42,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     let mut results = Vec::new();
 
     let mut skip_list = HashSet::new();
-    let prev_results = load_r13y_log(&job.nixpkgs_revision);
+    let prev_results = load_r13y_log(&job.nar_hash);
     for elem in prev_results.into_iter() {
         if elem.status == BuildStatus::FirstFailed {
             info!(
@@ -57,24 +57,22 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
 
     let mut to_build: HashSet<PathBuf> = HashSet::new();
 
-    for (subset, attr) in job.subsets.into_iter() {
+    let attr_name = job.attr.join(".");
 
-        info!("Evaluating {:?} {:#?}", &subset, &attr);
-        let eval = Command::new("nix")
-            .arg("path-info")
-            .arg("--derivation")
-            .arg("--recursive")
-            .arg(format!("nixpkgs/{}#{}",&job.nixpkgs_revision, attr.join(".")))
-            .output()
-            .expect("failed to execute process");
+    info!("Evaluating {:?}#{:?}", job.flake_url, attr_name);
+    let eval = Command::new("nix")
+        .arg("path-info")
+        .arg("--derivation")
+        .arg("--recursive")
+        .arg(format!("{}#{}",&job.flake_url, &attr_name))
+        .output()
+        .expect("failed to execute process");
 
-        for line in eval.stdout.lines().filter_map(Result::ok) {
-            if line.ends_with(".drv") {
-                to_build.insert(line.into());
-            }
+    for line in eval.stdout.lines().filter_map(Result::ok) {
+        if line.ends_with(".drv") {
+            to_build.insert(line.into());
         }
-        log_command_output(eval);
     }
-
+    log_command_output(eval);
     JobInstantiation { to_build, results, skip_list }
 }

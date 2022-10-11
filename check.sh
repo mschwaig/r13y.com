@@ -11,7 +11,7 @@ function nixpkgs_rev() (
 )
 
 function main() {
-    export SUBSET="$1"
+    export ATTR="$1"
     export REPORT_NAME="$2"
     export REV=$(nixpkgs_rev)
     export HASH=$(nix flake prefetch nixpkgs/${REV})
@@ -24,17 +24,13 @@ function main() {
     )
 
     cargo run -- \
-        --subset "$SUBSET" \
-        --rev "$REV" \
-        --sha256 "$HASH" \
+        --flake nixpkgs/$REV\#$ATTR \
         --max-cores 48 \
         --max-cores-per-job 4 \
         check
 
     cargo run -- \
-        --subset "$SUBSET" \
-        --rev "$REV" \
-        --sha256 "$HASH" \
+        --flake nixpkgs/$REV\#$ATTR \
         report
 
     mv ./report "./$REPORT_NAME"

@@ -40,11 +40,11 @@ pub fn report(instruction: BuildRequest) {
     let mut unchecked = 0;
     let mut first_failed: Vec<String> = vec![];
 
-    let attr_name = job.subsets.values().next().unwrap().join(".");
+    let attr_name = job.attr.join(".");
 
     for response in results.into_iter().filter(|response| {
         (match response.request {
-            BuildRequest::V1(ref req) => req.nixpkgs_revision == job.nixpkgs_revision,
+            BuildRequest::V1(ref req) => req.nar_hash == job.nar_hash,
         }) && to_build.contains(&PathBuf::from(&response.drv))
     }) {
         total += 1;
@@ -115,7 +115,7 @@ pub fn report(instruction: BuildRequest) {
             unchecked = unchecked,
             total = total,
             percent = format!("{:.*}%", 2, 100.0 * (reproducible as f64 / total as f64)),
-            revision = job.nixpkgs_revision,
+            revision = job.revision,
             now = Utc::now().to_string(),
             unreproduced_list = unreproducible_list.join("\n"),
             unchecked_list = unchecked_list.join("\n"),
@@ -145,7 +145,7 @@ r13y_path_status_count{{status=\"unreproducible\"}} {unreproducible}
 r13y_path_status_count{{status=\"unchecked\"}} {unchecked}
 
 ",
-            revision = job.nixpkgs_revision,
+            revision = job.revision,
             time = Utc::now().timestamp(),
             total = total,
             reproducible = reproducible,

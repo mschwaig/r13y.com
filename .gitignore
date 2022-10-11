@@ -1,7 +1,7 @@
 nixpkgs
 public
 result.drv
-target
-report
-tmp
+/target
+/report
+/tmp
 done
