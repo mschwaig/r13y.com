@@ -78,13 +78,16 @@ fn main() {
     let flake_url = v["resolvedUrl"].as_str().unwrap().to_string();
     let revision = v["revision"].as_str().unwrap().to_string();
     let nar_hash = v["locked"]["narHash"].as_str().unwrap().to_string();
+    // sadly nar hashes cannot occur in file names as they are because they can contain /
+    // so we replace that caracter and use that modified version everywhere
+    let pathsafe_nar_hash = nar_hash.replace("/", "\\");
 
     debug!("flake_url: {flake_url}, revision: {revision}, nar_hash: {nar_hash}");
 
     let instruction = BuildRequest::V1(BuildRequestV1 {
         flake_url,
         revision,
-        nar_hash,
+        nar_hash : pathsafe_nar_hash,
         result_url: opt.result_url.unwrap_or_else(|| String::from("bogus")),
         attr: opt.subsets.1,
     });
