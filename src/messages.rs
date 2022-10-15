@@ -63,11 +63,6 @@ pub struct BuildRequestV1 {
     pub attr: Attr,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Subset {
-
-}
-
 /// nixos.iso_minimal.x86_64-linux would be
 /// &["nixos", "iso_minimal", "x86_64-linux"] but vec'd.
 pub type Attr = Vec<String>;

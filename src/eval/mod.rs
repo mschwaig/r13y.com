@@ -6,7 +6,7 @@ use std::{
     collections::HashSet,
     fs::File,
     io::BufRead,
-    path::{PathBuf},
+    path::PathBuf,
     process::{Command, Output},
 };
 
@@ -55,11 +55,9 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         }
     }
 
-    let mut to_build: HashSet<PathBuf> = HashSet::new();
-
     let attr_name = job.attr.join(".");
 
-    info!("Evaluating {:?}#{:?}", job.flake_url, attr_name);
+    info!("Evaluating {}#{}", job.flake_url, attr_name);
     let eval = Command::new("nix")
         .arg("path-info")
         .arg("--derivation")
@@ -68,11 +66,16 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .output()
         .expect("failed to execute process");
 
-    for line in eval.stdout.lines().filter_map(Result::ok) {
-        if line.ends_with(".drv") {
-            to_build.insert(line.into());
-        }
-    }
+    let to_build = eval
+        .stdout
+        .lines()
+        .filter_map(|line_result| {
+            line_result
+                .ok()
+                .and_then(|line| line.ends_with(".drv").then_some(line.into()))
+        })
+        .collect();
+
     log_command_output(eval);
     JobInstantiation { to_build, results, skip_list }
 }

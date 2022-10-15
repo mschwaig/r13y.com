@@ -1,9 +1,9 @@
 use log::debug;
 
-use serde_json::Value;
-
+use serde_derive::Deserialize;
 use structopt::StructOpt;
 use std::process::Command;
+
 
 use r13y::{
     check::check,
@@ -27,7 +27,7 @@ struct Opt {
     /// Which derivation from any flake to test.
     /// Format: `flake/rev#attr.path flake2/rev2#attr.path`.
     #[structopt(short = "f", long = "flake", parse(try_from_str = "parse_subset"))]
-    subsets: (String, Attr),
+    flake_attr: FlakeAttr,
 }
 
 #[derive(StructOpt, Debug)]
@@ -38,7 +38,27 @@ enum Mode {
     Report,
 }
 
-fn parse_subset(s: &str) -> Result<(String, Attr), &'static str> {
+#[derive(Debug)]
+struct FlakeAttr {
+    flake : Flake,
+    attr: Attr
+}
+
+#[derive(Deserialize, Debug)]
+struct Flake {
+    #[serde(rename = "resolvedUrl")]
+    resolved_url : String,
+    revision : String,
+    locked : Locked
+}
+
+#[derive(Deserialize, Debug)]
+struct Locked {
+    #[serde(rename = "narHash")]
+    nar_hash : String
+}
+
+fn parse_subset(s: &str) -> Result<FlakeAttr, &'static str> {
     let mut comp = s.split('#');
 
     let subset = match comp.next() {
@@ -46,12 +66,30 @@ fn parse_subset(s: &str) -> Result<(String, Attr), &'static str> {
         None => return Err("no subset specifier"),
     };
 
-    if let Some(attr) = comp.next() {
-        let attr_path = attr.split('.').map(str::to_owned).collect();
-        Ok((subset.to_string(), attr_path))
-    } else {
-        Err("Empty attribute specifier")
-    }
+    let attr_path = match comp.next() {
+        Some (attr) => attr.split('.').map(str::to_owned).collect(),
+        None => return Err("Empty attribute specifier")
+    };
+
+    let resolve = Command::new("nix")
+        .arg("flake")
+        .arg("metadata")
+        .arg("--json")
+        .arg(subset)
+        .output()
+        .expect("failed to execute process");
+
+    let resolve_output = String::from_utf8(resolve.stdout).expect("could not retrieve stdout");
+
+    debug!("Resolve output: {}", resolve_output);
+
+    let mut flake: Flake = serde_json::from_str(&resolve_output).expect("failed to parse flake metadata");
+    // sadly nar hashes cannot occur in file names as they are because they can contain /
+    // so we replace that caracter and use that modified version everywhere
+    flake.locked.nar_hash = flake.locked.nar_hash.replace("/", "\\");
+    println!("deserialized = {:?}", flake);
+
+    Ok(FlakeAttr{ flake, attr : attr_path })
 }
 
 fn main() {
@@ -61,35 +99,13 @@ fn main() {
 
     debug!("Using options: {:#?}", opt);
 
-    let resolve = Command::new("nix")
-        .arg("flake")
-        .arg("metadata")
-        .arg("--json")
-        .arg(opt.subsets.0)
-        .output()
-        .expect("failed to execute process");
-
-    let resolve_output = String::from_utf8(resolve.stdout).unwrap();
-
-    debug!("Resolve output: {:#?}", resolve_output);
-
-    let v: Value = serde_json::from_str(&resolve_output).expect("failed to parse flake metadata");
-    // some strange dance to get rid of the quotes
-    let flake_url = v["resolvedUrl"].as_str().unwrap().to_string();
-    let revision = v["revision"].as_str().unwrap().to_string();
-    let nar_hash = v["locked"]["narHash"].as_str().unwrap().to_string();
-    // sadly nar hashes cannot occur in file names as they are because they can contain /
-    // so we replace that caracter and use that modified version everywhere
-    let pathsafe_nar_hash = nar_hash.replace("/", "\\");
-
-    debug!("flake_url: {flake_url}, revision: {revision}, nar_hash: {nar_hash}");
 
     let instruction = BuildRequest::V1(BuildRequestV1 {
-        flake_url,
-        revision,
-        nar_hash : pathsafe_nar_hash,
+        flake_url: opt.flake_attr.flake.resolved_url,
+        revision: opt.flake_attr.flake.revision,
+        nar_hash : opt.flake_attr.flake.locked.nar_hash,
         result_url: opt.result_url.unwrap_or_else(|| String::from("bogus")),
-        attr: opt.subsets.1,
+        attr: opt.flake_attr.attr,
     });
 
     debug!("Using instruction: {:#?}", instruction);
