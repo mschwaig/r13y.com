@@ -59,11 +59,11 @@ impl Derivation {
             .collect()
     }
 
-    pub fn outputs_rev(&self) -> HashMap<&PathBuf, &String> {
+    pub fn output_to_drv_path_map(&self, drv_path : &String) -> HashMap<&PathBuf, String> {
         self.outputs
             .iter()
             .map(|(name, submap)| (name, submap.get("path")))
-            .filter_map(|(name, path)| path.map(|p| (p, name)))
+            .filter_map(|(name, path)| path.map(|p| (p, drv_path.clone())))
             .collect()
     }
 }

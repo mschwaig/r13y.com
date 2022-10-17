@@ -99,12 +99,12 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     println!("hash map = {:#?}", drvs);
 
     // make it possible to look up derivation paths by output path
-    let drv_lookup: HashMap<&PathBuf, &String> =
-        drvs.iter().flat_map(|(_k, v)| v.outputs_rev()).collect(); // .cloned?
+    let drv_lookup: HashMap<&PathBuf, String> =
+        drvs.iter().flat_map(|(k, v)| v.output_to_drv_path_map(k)).collect(); // .cloned?
 
-    let validated_by: HashMap<&String, &String> = drvs
+    let validated_by: HashMap<String, &String> = drvs
         .iter()
-        .filter(|(_p, validator)| //: HashMap<&String, &String>
+        .filter(|(p, validator)|
           validator.env.VERIFIES.is_some())
         .map(
             |(p, validator)| {
@@ -119,6 +119,9 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
                // the original drv path as the value
         )
         .collect();
+
+    println!("drv_lookup = {:#?}", drv_lookup);
+
 
     // finally when outputting the build results
     // before outputting a failure check if there
