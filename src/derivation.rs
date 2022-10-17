@@ -1,13 +1,28 @@
 use serde_json;
+use serde_with::{
+    serde_as,
+    StringWithSeparator,
+    formats::CommaSeparator
+};
 
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     io::BufRead,
     path::{Path, PathBuf},
     process::Command,
 };
 
-#[derive(Deserialize)]
+// we only deserialize the part of Env we care about
+#[derive(Deserialize, Debug)]
+//#[serde_as]
+struct Env {
+    //#[serde_as(as = "StringWithSeparator::<CommaSeparator, String>")]
+    //VERIFIES: Option<HashSet<String>>
+    pub(crate) VERIFIES: Option<String>
+    // TODO: try serde deserialize_with
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Derivation {
     outputs: HashMap<String, HashMap<String, PathBuf>>,
     // inputSrcs,
@@ -16,6 +31,7 @@ pub struct Derivation {
     // builder,
     // args,
     // env: HashMap<String, String>,
+    pub(crate) env : Env
 }
 
 impl Derivation {

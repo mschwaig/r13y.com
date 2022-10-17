@@ -1,14 +1,19 @@
 use log::{debug, info};
 
-use crate::messages::{BuildRequest, BuildResponseV1, BuildStatus};
+use crate::{
+    derivation::Derivation,
+    messages::{BuildRequest, BuildResponseV1, BuildStatus},
+};
 
 use std::{
-    collections::HashSet,
+    collections::{HashMap, HashSet},
     fs::File,
     io::BufRead,
     path::PathBuf,
     process::{Command, Output},
 };
+
+
 
 fn log_command_output(output: Output) {
     for line in output.stderr.lines() {
@@ -77,5 +82,56 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .collect();
 
     log_command_output(eval);
+
+    info!("Evaluating {}#{}", job.flake_url, attr_name);
+    let show = Command::new("nix")
+        .arg("show-derivation")
+        .arg("--recursive")
+        .arg(format!("{}#{}",&job.flake_url, &attr_name))
+        .output()
+        .expect("failed to execute process");
+
+    let show_output = String::from_utf8(show.stdout).expect("could not retrieve stdout");
+
+    //log_command_output(show);
+
+    let drvs: HashMap<String, Derivation> = serde_json::from_str(&show_output)
+        .expect("failed to parse derivation");
+
+    println!("hash map = {:#?}", drvs);
+
+    // make it possible to look up derivation paths by output path
+    let drv_lookup : HashMap<PathBuf, String> = drvs.iter().flat_map(|(k, v)|
+        v.outputs().values().map(|out_path|
+            (
+                (*out_path).clone(),
+                //    .get("path")
+                //    .expect("derivation output without output path"),
+                k.clone()
+            )
+        )
+    ).collect(); // .cloned?
+
+    let validated_by : HashMap<String, &String> = drvs.iter().filter( |(p, validator)| //: HashMap<&String, &String>
+          validator.env.VERIFIES.is_some()
+        ).map( |(p, validator)| {
+        let verifies : String = validator.env.VERIFIES.as_ref().unwrap().clone();
+        (
+            drv_lookup.get(&PathBuf::from(verifies)).unwrap().clone(), // .cloned().into()).unwrap()
+            p
+        )}
+        // take output path from env value
+        // look up drv path based on that
+        // create a new map with the found drv path as the key and
+        // the original drv path as the value
+        ).collect();
+    
+    // finally when outputting the build results
+    // before outputting a failure check if there
+    // is an entry in the validated_by list
+    // and if there is and this succeeds, then mark it green (verified by other drv)
+    // and if there is and this failes, then mark it red (violates other drv)
+    println!("validated_by = {:#?}", validated_by);
+
     JobInstantiation { to_build, results, skip_list }
 }
