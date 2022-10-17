@@ -1,12 +1,7 @@
 use serde_json;
-use serde_with::{
-    serde_as,
-    StringWithSeparator,
-    formats::CommaSeparator
-};
 
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     io::BufRead,
     path::{Path, PathBuf},
     process::Command,
@@ -15,11 +10,10 @@ use std::{
 // we only deserialize the part of Env we care about
 #[derive(Deserialize, Debug)]
 //#[serde_as]
-struct Env {
+pub(crate) struct Env {
     //#[serde_as(as = "StringWithSeparator::<CommaSeparator, String>")]
     //VERIFIES: Option<HashSet<String>>
-    pub(crate) VERIFIES: Option<String>
-    // TODO: try serde deserialize_with
+    pub(crate) VERIFIES: Option<String>, // TODO: try serde deserialize_with
 }
 
 #[derive(Deserialize, Debug)]
@@ -31,7 +25,7 @@ pub struct Derivation {
     // builder,
     // args,
     // env: HashMap<String, String>,
-    pub(crate) env : Env
+    pub(crate) env: Env,
 }
 
 impl Derivation {
@@ -62,6 +56,14 @@ impl Derivation {
             .iter()
             .map(|(name, submap)| (name, submap.get("path")))
             .filter_map(|(name, path)| path.map(|p| (name, p)))
+            .collect()
+    }
+
+    pub fn outputs_rev(&self) -> HashMap<&PathBuf, &String> {
+        self.outputs
+            .iter()
+            .map(|(name, submap)| (name, submap.get("path")))
+            .filter_map(|(name, path)| path.map(|p| (p, name)))
             .collect()
     }
 }

@@ -13,8 +13,6 @@ use std::{
     process::{Command, Output},
 };
 
-
-
 fn log_command_output(output: Output) {
     for line in output.stderr.lines() {
         info!("stderr: {:?}", line)
@@ -36,7 +34,7 @@ pub fn load_r13y_log(rev: &str) -> Vec<BuildResponseV1> {
 pub struct JobInstantiation {
     pub results: Vec<BuildResponseV1>,
     pub to_build: HashSet<PathBuf>,
-    pub skip_list: HashSet<PathBuf>
+    pub skip_list: HashSet<PathBuf>,
 }
 
 pub fn eval(instruction: BuildRequest) -> JobInstantiation {
@@ -67,7 +65,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .arg("path-info")
         .arg("--derivation")
         .arg("--recursive")
-        .arg(format!("{}#{}",&job.flake_url, &attr_name))
+        .arg(format!("{}#{}", &job.flake_url, &attr_name))
         .output()
         .expect("failed to execute process");
 
@@ -87,7 +85,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     let show = Command::new("nix")
         .arg("show-derivation")
         .arg("--recursive")
-        .arg(format!("{}#{}",&job.flake_url, &attr_name))
+        .arg(format!("{}#{}", &job.flake_url, &attr_name))
         .output()
         .expect("failed to execute process");
 
@@ -95,37 +93,33 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
 
     //log_command_output(show);
 
-    let drvs: HashMap<String, Derivation> = serde_json::from_str(&show_output)
-        .expect("failed to parse derivation");
+    let drvs: HashMap<String, Derivation> =
+        serde_json::from_str(&show_output).expect("failed to parse derivation");
 
     println!("hash map = {:#?}", drvs);
 
     // make it possible to look up derivation paths by output path
-    let drv_lookup : HashMap<PathBuf, String> = drvs.iter().flat_map(|(k, v)|
-        v.outputs().values().map(|out_path|
-            (
-                (*out_path).clone(),
-                //    .get("path")
-                //    .expect("derivation output without output path"),
-                k.clone()
-            )
-        )
-    ).collect(); // .cloned?
+    let drv_lookup: HashMap<&PathBuf, &String> =
+        drvs.iter().flat_map(|(_k, v)| v.outputs_rev()).collect(); // .cloned?
 
-    let validated_by : HashMap<String, &String> = drvs.iter().filter( |(p, validator)| //: HashMap<&String, &String>
-          validator.env.VERIFIES.is_some()
-        ).map( |(p, validator)| {
-        let verifies : String = validator.env.VERIFIES.as_ref().unwrap().clone();
-        (
-            drv_lookup.get(&PathBuf::from(verifies)).unwrap().clone(), // .cloned().into()).unwrap()
-            p
-        )}
-        // take output path from env value
-        // look up drv path based on that
-        // create a new map with the found drv path as the key and
-        // the original drv path as the value
-        ).collect();
-    
+    let validated_by: HashMap<&String, &String> = drvs
+        .iter()
+        .filter(|(_p, validator)| //: HashMap<&String, &String>
+          validator.env.VERIFIES.is_some())
+        .map(
+            |(p, validator)| {
+                let verifies: String = validator.env.VERIFIES.as_ref().unwrap().clone();
+                (
+                    drv_lookup.get(&PathBuf::from(verifies)).unwrap().clone(), // .cloned().into()).unwrap()
+                    p,
+                )
+            }, // take output path from env value
+               // look up drv path based on that
+               // create a new map with the found drv path as the key and
+               // the original drv path as the value
+        )
+        .collect();
+
     // finally when outputting the build results
     // before outputting a failure check if there
     // is an entry in the validated_by list
@@ -133,5 +127,9 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     // and if there is and this failes, then mark it red (violates other drv)
     println!("validated_by = {:#?}", validated_by);
 
-    JobInstantiation { to_build, results, skip_list }
+    JobInstantiation {
+        to_build,
+        results,
+        skip_list,
+    }
 }
