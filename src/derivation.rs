@@ -87,7 +87,7 @@ impl Derivation {
         let drvs: HashMap<String, Derivation> =
             serde_json::from_str(&show_output).expect("failed to parse derivation");
 
-        println!("hash map = {:#?}", drvs);
+        info!("hash map = {:#?}", drvs);
 
         // make it possible to look up derivation paths by output path
         let drv_lookup: HashMap<&PathBuf, String> =
@@ -111,7 +111,7 @@ impl Derivation {
             )
             .collect();
 
-        println!("drv_lookup = {:#?}", drv_lookup);
+        info!("drv_lookup = {:#?}", drv_lookup);
 
 
         // finally when outputting the build results
@@ -119,7 +119,7 @@ impl Derivation {
         // is an entry in the validated_by list
         // and if there is and this succeeds, then mark it green (verified by other drv)
         // and if there is and this failes, then mark it red (violates other drv)
-        println!("validated_by = {:#?}", validated_by);
+        warn!("validated_by = {:#?}", validated_by);
 
         return validated_by;
     }

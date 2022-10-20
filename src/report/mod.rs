@@ -12,6 +12,7 @@ use std::{
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
+    collections::HashMap,
 };
 
 pub fn report(instruction: BuildRequest) {
@@ -38,26 +39,42 @@ pub fn report(instruction: BuildRequest) {
     let mut unreproducible_list: Vec<String> = vec![];
     let mut unchecked_list: Vec<String> = vec![];
     let mut unchecked = 0;
-    let mut first_failed: Vec<String> = vec![];
+    let mut first_failed: Vec<&String> = vec![];
+
+    let validated_by = Derivation::drvs_in_closure_are_validated_by(&job.flake_url, &job.attr);
 
     let attr_name = job.attr.join(".");
 
-    for response in results.into_iter().filter(|response| {
+    let results = results.iter().map(|x| (&x.drv, x)).collect::<HashMap<_,_>>();
+
+    for response in results.values().into_iter().filter(|response| {
         (match response.request {
             BuildRequest::V1(ref req) => req.nar_hash == job.nar_hash,
         }) && to_build.contains(&PathBuf::from(&response.drv))
     }) {
         total += 1;
-        match response.status {
+        match &response.status {
             BuildStatus::Reproducible => {
                 reproducible += 1;
             }
             BuildStatus::FirstFailed => {
-                first_failed.push(response.drv);
+                first_failed.push(&response.drv);
             }
             BuildStatus::SecondFailed => {
                 unchecked += 1;
-                unchecked_list.push(format!("<li><code>{}</code></li>", response.drv));
+                let unchecked_line = match validated_by.get(&response.drv) {
+                    Some(x) => {
+                        let y = results.get(x).unwrap();
+                        match y.status {
+                            BuildStatus::Reproducible => format!(
+                                "<li><code>{}</code> (verified by <code>{}</code>)</li>", response.drv, y.drv),
+                            _ => format!("<li><code>{}</code> (failed verification by <code>{}</code>)</li>", response.drv, y.drv)
+                        }
+                    },
+                    None => format!("<li><code>{}</code></li>", response.drv)
+                };
+                unchecked_list.push(unchecked_line);
+
             }
             BuildStatus::Unreproducible(hashes) => {
                 let parsed_drv = Derivation::parse(&Path::new(&response.drv)).unwrap();
