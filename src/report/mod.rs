@@ -66,8 +66,7 @@ pub fn report(instruction: BuildRequest) {
                     Some(x) => {
                         let y = results.get(x).unwrap();
                         match y.status {
-                            BuildStatus::Reproducible => format!(
-                                "<li><code>{}</code> (verified by <code>{}</code>)</li>", response.drv, y.drv),
+                            BuildStatus::Reproducible => format!("<li><code>{}</code> (<b style=\"color: green\">verified</b> by <code>{}</code>)</li>", response.drv, y.drv),
                             _ => format!("<li><code>{}</code> (failed verification by <code>{}</code>)</li>", response.drv, y.drv)
                         }
                     },
