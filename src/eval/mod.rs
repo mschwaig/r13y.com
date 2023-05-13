@@ -65,6 +65,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .arg("path-info")
         .arg("--derivation")
         .arg("--recursive")
+        .arg("--impure")
         .arg(format!("{}#{}", &job.flake_url, &attr_name))
         .output()
         .expect("failed to execute process");
