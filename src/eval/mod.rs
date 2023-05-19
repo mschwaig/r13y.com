@@ -76,7 +76,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .filter_map(|line_result| {
             line_result
                 .ok()
-                .and_then(|line| line.ends_with(".drv").then_some(line.into()))
+                .and_then(|line| line.ends_with(".drv").then(||line.into()))
         })
         .collect();
 
