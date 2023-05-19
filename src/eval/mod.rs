@@ -86,13 +86,15 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     let show = Command::new("nix")
         .arg("show-derivation")
         .arg("--recursive")
+        .arg("--impure")
         .arg(format!("{}#{}", &job.flake_url, &attr_name))
         .output()
         .expect("failed to execute process");
 
+
     let show_output = String::from_utf8(show.stdout).expect("could not retrieve stdout");
 
-    //log_command_output(show);
+    //info!("show_output: {:?}", show_output);
 
     let drvs: HashMap<String, Derivation> =
         serde_json::from_str(&show_output).expect("failed to parse derivation");
