@@ -65,6 +65,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .arg("path-info")
         .arg("--derivation")
         .arg("--recursive")
+        .arg("--impure")
         .arg(format!("{}#{}", &job.flake_url, &attr_name))
         .output()
         .expect("failed to execute process");
@@ -75,7 +76,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
         .filter_map(|line_result| {
             line_result
                 .ok()
-                .and_then(|line| line.ends_with(".drv").then_some(line.into()))
+                .and_then(|line| line.ends_with(".drv").then(||line.into()))
         })
         .collect();
 
