@@ -46,9 +46,7 @@ struct FlakeAttr {
 
 #[derive(Deserialize, Debug)]
 struct Flake {
-    #[serde(rename = "resolvedUrl")]
-    resolved_url : String,
-    revision : String,
+    url : String,
     locked : Locked
 }
 
@@ -101,8 +99,7 @@ fn main() {
 
 
     let instruction = BuildRequest::V1(BuildRequestV1 {
-        flake_url: opt.flake_attr.flake.resolved_url,
-        revision: opt.flake_attr.flake.revision,
+        flake_url: opt.flake_attr.flake.url,
         nar_hash : opt.flake_attr.flake.locked.nar_hash,
         result_url: opt.result_url.unwrap_or_else(|| String::from("bogus")),
         attr: opt.flake_attr.attr,

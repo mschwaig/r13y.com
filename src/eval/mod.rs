@@ -31,7 +31,14 @@ pub fn load_r13y_log(rev: &str) -> Vec<BuildResponseV1> {
     }
 }
 
+#[derive(Deserialize, Debug)]
+pub(crate) struct Metadata {
+    pub(crate) url: String,
+}
+
 pub struct JobInstantiation {
+    pub flake_url: String,
+    pub derivation_path: String,
     pub results: Vec<BuildResponseV1>,
     pub to_build: HashSet<PathBuf>,
     pub skip_list: HashSet<PathBuf>,
@@ -60,6 +67,32 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
 
     let attr_name = job.attr.join(".");
 
+    info!("Resolve Flake {}#{}", job.flake_url, attr_name);
+    let flake_metadata = Command::new("nix")
+        .arg("flake")
+        .arg("metadata")
+        .arg("--json")
+        .arg(&job.flake_url)
+        .output()
+        .expect("failed to execute process");
+
+    let metadata_json = String::from_utf8(flake_metadata.stdout).expect("could not retrieve stdout");
+    println!("metadata:{}", metadata_json);
+    let metadata: Metadata = serde_json::from_str(&metadata_json).expect("failed to parse metadata");
+
+    info!("Evaluating1 {}#{}", job.flake_url, attr_name);
+    let eval1 = Command::new("nix")
+        .arg("path-info")
+        .arg("--derivation")
+        .arg("--impure")
+        .arg(format!("{}#{}", &job.flake_url, &attr_name))
+        .output()
+        .expect("failed to execute process");
+
+    let derivation_path = eval1
+        .stdout
+        .lines().next().unwrap().expect("failed to unwrap derivation");
+
     info!("Evaluating {}#{}", job.flake_url, attr_name);
     let eval = Command::new("nix")
         .arg("path-info")
@@ -83,6 +116,8 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
     log_command_output(eval);
 
     JobInstantiation {
+        flake_url : metadata.url,
+        derivation_path,
         to_build,
         results,
         skip_list,

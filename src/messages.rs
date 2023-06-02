@@ -44,8 +44,7 @@ pub enum BuildRequest {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct BuildRequestV1 {
     pub flake_url: String,
-    /// revision to fetch for the build
-    pub revision: String,
+
     /// nar hash of fetched flake to support pure evaluation mode, and
     /// a double-check since we're running on people's computers
     pub nar_hash: String,

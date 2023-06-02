@@ -1,17 +1,15 @@
 <html>
 <head>
-<title>Is NixOS Reproducible?</title>
+<title>Reproducibility Report</title>
 <meta name="description" content="nixos-unstable's {attr_name} build is {percent} reproducible!" />
 
 <!-- Twitter Card data -->
 <meta name="twitter:card" value="summary">
 
 <!-- Open Graph data -->
-<meta property="og:title" content="Is NixOS Reproducible?" />
+<meta property="og:title" content="Reproducibility Report" />
 <meta property="og:type" content="article" />
-<meta property="og:url" content="https://r13y.com/" />
-<meta property="og:image" content="https://nixos.org/logo/nixos-logo-only-hires.png" />
-<meta property="og:description" content="nixos-unstable's {attr_name} build is {percent} reproducible!" />
+<meta property="og:description" content="{remote_url_with_rev}#{attr_name} build is {percent} reproducible!" />
 <style>
 body {{
     max-width: 50em;
@@ -56,6 +54,9 @@ body {{
   </span>
   <span class="logo__letter logo__letter--end">Y: NixOS</span>
 </h1>
+<h3>When rebuilding</h3>
+{remote_url_with_rev}#{attr_name} which resolves to
+{derivation_path} and all of its dependencies,
 <h1 style="color: green">{reproduced} out of {total} ({percent}) paths in the {attr_name} are reproducible!</h1>
 <p>{unchecked} unchecked</p>
 <hr>
