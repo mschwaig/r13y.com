@@ -67,7 +67,7 @@ pub fn eval(instruction: BuildRequest) -> JobInstantiation {
 
     let attr_name = job.attr.join(".");
 
-    info!("Resolve Flake {}#{}", job.flake_url, attr_name);
+    info!("Resolve Flake {}", job.flake_url);
     let flake_metadata = Command::new("nix")
         .arg("flake")
         .arg("metadata")

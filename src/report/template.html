@@ -47,17 +47,19 @@ body {{
 </head>
 <body>
 <h1 class="logo">
-  <span class="logo__letter logo__letter--start">R</span>
   <span class="logo__middle">
-    <span class="logo__count">13</span>
-    <span class="logo__text">eproducibilit</span>
+    <span class="logo__count">F</span>
+    <span class="logo__text">Flake</span>
   </span>
-  <span class="logo__letter logo__letter--end">Y: NixOS</span>
+  <span class="logo__middle">
+    <span class="logo__count">15</span>
+    <span class="logo__text">Reproducibility</span>
+  </span>
 </h1>
-<h3>When rebuilding</h3>
-{remote_url_with_rev}#{attr_name} which resolves to
-{derivation_path} and all of its dependencies,
-<h1 style="color: green">{reproduced} out of {total} ({percent}) paths in the {attr_name} are reproducible!</h1>
+<p>When rebuilding...<br />
+<a href="{remote_url_with_rev}#{attr_name}"><code>{remote_url_with_rev}#{attr_name}</code></a> which resolves to
+<a href="file://{derivation_path}">{derivation_path}</code></a> and all of its dependencies, ...</p>
+<h1 style="color: green">{reproduced} out of {total} ({percent}) paths are reproducible!</h1>
 <p>{unchecked} unchecked</p>
 <hr>
 <h3>unreproduced paths</h3>
